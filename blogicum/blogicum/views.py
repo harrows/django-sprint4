@@ -185,7 +185,8 @@ class CommentUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
 class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Comment
-
+    pk_url_kwarg = "comment_id"
+    
     def test_func(self):
         comment = self.get_object()
         return self.request.user == comment.author
