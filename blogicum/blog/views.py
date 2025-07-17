@@ -3,13 +3,19 @@ from django.urls import reverse, reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth import login
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-
+from django.contrib.auth.forms import UserCreationForm
+from django.urls import reverse_lazy
 from .models import Post, Category, Comment
 from .forms import PostForm, ProfileEditForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
+
+class SignUp(CreateView):
+    form_class   = UserCreationForm
+    template_name = 'registration/signup.html'
+    success_url   = reverse_lazy('login')
 
 
 class IndexView(ListView):

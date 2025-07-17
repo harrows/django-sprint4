@@ -5,7 +5,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from .models import Post, Category, Comment
+from blog.models import Post, Category, Comment
 from django.db.models import Q
 
 User = get_user_model()
@@ -186,7 +186,7 @@ class CommentUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Comment
     pk_url_kwarg = "comment_id"
-    
+
     def test_func(self):
         comment = self.get_object()
         return self.request.user == comment.author
