@@ -13,7 +13,7 @@ SECRET_KEY = 'django-insecure-1ge0fy!d0j-n!(8yxzvz$19qpw$y*p$bbk2lv88-#(1m-bvh4h
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'blogicum'
     'blog',
     'pages',
     "django_bootstrap5",
@@ -117,7 +118,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 POSTS_ON_INDEX = 5
 
-
+STATIC_URL = '/static/'
 MEDIA_URL  = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -127,3 +128,7 @@ EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
 if DEBUG:
     INSTALLED_APPS += ['debug_toolbar']
     MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+
+CSRF_FAILURE_VIEW = 'blogicum.views.csrf_failure'
+LOGIN_URL = '/auth/login/'
+LOGIN_REDIRECT_URL = '/'

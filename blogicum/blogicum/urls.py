@@ -1,28 +1,29 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from blogicum import views
 from .views import EditProfileView
 from django.conf import settings
 from django.conf.urls.static import static
 
 
-handler404 = 'pages.views.page_not_found'
-handler500 = 'pages.views.server_error'
-handler403 = 'pages.views.csrf_failure'
-
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('blog.urls')),
-    path('', include(('blog.urls', 'blog'), namespace='blog')),
-    # path('', include(('users.urls', 'users'), namespace='users')),
-    path('auth/', include(('users.urls', 'users'), namespace='users')),
+    path('', views.IndexView.as_view(), name='index'),
+    path('category/<slug:slug>/', views.CategoryView.as_view(), name='category'),
+    path('profile/<str:username>/', views.ProfileView.as_view(), name='profile'),
+    path('profile/<str:username>/edit/', views.EditProfileView.as_view(), name='edit_profile'),
+    path('posts/<int:pk>/', views.PostDetailView.as_view(), name='post_detail'),
+    path('posts/create/', views.PostCreateView.as_view(), name='post_create'),
+    path('posts/<int:pk>/edit/', views.PostUpdateView.as_view(), name='post_edit'),
+    path('posts/<int:pk>/delete/', views.PostDeleteView.as_view(), name='post_delete'),
+    path('comments/<int:pk>/edit/', views.CommentUpdateView.as_view(), name='comment_edit'),
+    path('comments/<int:pk>/delete/', views.CommentDeleteView.as_view(), name='comment_delete'),
+    path('about/', views.AboutPageView.as_view(), name='about'),
+    path('rules/', views.RulesPageView.as_view(), name='rules'),
     path('auth/', include('django.contrib.auth.urls')),
-    path('pages/', include('pages.urls')),
-    path('profile/edit/', EditProfileView.as_view(), name='edit_profile'),
-    path('posts/<int:pk>/', PostDetailView.as_view(), name='post_detail'),
-    path('posts/create/', PostCreateView.as_view(), name='post_create'),
-    path('profile/<str:username>/', ProfileView.as_view(), name='profile'),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
 
-if settings.DEBUG:
-    import debug_toolbar
-    urlpatterns = [path('__debug__/', include(debug_toolbar.urls))] + urlpatterns
+
+handler403 = 'blogicum.views.permission_denied'
+handler404 = 'blogicum.views.page_not_found'
+handler500 = 'blogicum.views.server_error'

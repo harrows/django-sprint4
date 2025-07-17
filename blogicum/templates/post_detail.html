@@ -1,0 +1,43 @@
+<h1>{{ post.title }}</h1>
+<p>
+  Автор: <a href="{% url 'profile' post.author.username %}">{{ post.author.username }}</a> |
+  Категория: <a href="{% url 'category' post.category.slug %}">{{ post.category.title }}</a> |
+  Дата: {{ post.pub_date|date:"d.m.Y H:i" }} {% if not post.is_published %}<em>(черновик)</em>{% endif %}
+</p>
+{% if post.image %}
+  <img src="{{ post.image.url }}" alt="{{ post.title }}">
+{% endif %}
+<p>{{ post.text }}</p>
+{% if request.user == post.author %}
+  <p>
+    <a href="{% url 'post_edit' post.id %}">Редактировать публикацию</a> |
+    <a href="{% url 'post_delete' post.id %}">Удалить публикацию</a>
+  </p>
+{% endif %}
+
+<h2>Комментарии</h2>
+{% for comment in comments %}
+<div class="comment">
+  <p><strong>{{ comment.author.username }}</strong> <small>{{ comment.created_at|date:"d.m.Y H:i" }}</small></p>
+  <p>{{ comment.text }}</p>
+  {% if request.user == comment.author %}
+    <p>
+      <a href="{% url 'comment_edit' comment.id %}">Редактировать</a> |
+      <a href="{% url 'comment_delete' comment.id %}">Удалить</a>
+    </p>
+  {% endif %}
+</div>
+{% empty %}
+  <p>Комментариев пока нет.</p>
+{% endfor %}
+
+{% if user.is_authenticated %}
+<h3>Добавить комментарий</h3>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Отправить</button>
+</form>
+{% else %}
+<p><a href="{% url 'login' %}?next={{ request.path }}">Войдите</a>, чтобы оставить комментарий.</p>
+{% endif %}

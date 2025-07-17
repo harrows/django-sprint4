@@ -1,0 +1,33 @@
+<h1>Профиль {{ profile_user.username }}</h1>
+<p>Всего публикаций: {{ page_obj.paginator.count }}</p>
+{% if request.user == profile_user %}
+  <p><a href="{% url 'edit_profile' profile_user.username %}">Редактировать профиль</a></p>
+{% endif %}
+
+{% for post in posts %}
+<div class="post">
+  <h2><a href="{% url 'post_detail' post.id %}">{{ post.title }}</a></h2>
+  <p>
+    Категория: <a href="{% url 'category' post.category.slug %}">{{ post.category.title }}</a> |
+    Дата: {{ post.pub_date|date:"d.m.Y H:i" }} {% if not post.is_published %}<em>(черновик)</em>{% endif %}
+  </p>
+  {% if post.image %}
+    <img src="{{ post.image.url }}" alt="{{ post.title }}">
+  {% endif %}
+  <p>{{ post.text|truncatewords:30 }}</p>
+</div>
+{% empty %}
+  <p>Пользователь ещё не добавил ни одной публикации.</p>
+{% endfor %}
+
+{% if is_paginated %}
+<div class="pagination">
+  {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}">Назад</a>
+  {% endif %}
+  <span>Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">Вперёд</a>
+  {% endif %}
+</div>
+{% endif %}
