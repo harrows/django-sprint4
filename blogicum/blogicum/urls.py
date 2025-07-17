@@ -10,8 +10,10 @@ handler403 = 'pages.views.csrf_failure'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', include('blog.urls')),
     path('', include(('blog.urls', 'blog'), namespace='blog')),
-    path('', include(('users.urls', 'users'), namespace='users')),
+    # path('', include(('users.urls', 'users'), namespace='users')),
+    path('auth/', include(('users.urls', 'users'), namespace='users')),
     path('auth/', include('django.contrib.auth.urls')),
     path('pages/', include('pages.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -72,9 +72,9 @@ class Location(models.Model):
 
 class Post(models.Model):
     author = models.ForeignKey(
-        User,
-        verbose_name='Автор публикации',
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        related_name='posts',
     )
     category = models.ForeignKey(
         Category,

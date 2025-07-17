@@ -3,22 +3,25 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
+from django.utils import timezone
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from .models import Post, Comment, Category
-from .forms  import PostForm, CommentForm
+from .forms import PostForm, CommentForm
+from django.contrib.auth import get_user_model
 
 
-
-POSTS_ON_PAGE: int = getattr(settings, 'POSTS_ON_INDEX', 10)
-
+# POSTS_PER_PAGE: int = getattr(settings, 'POSTS_ON_INDEX', 10)
+POSTS_PER_PAGE = 10
 
 def index(request):
     post_list = (Post.objects
-                 .filter(is_published=True, pub_date__lte=timezone.now())
+                 .filter(is_published=True, pub_date__lte=timezone.now(),
+                         category__is_published=True)
                  .select_related('author', 'location', 'category')
                  .order_by('-pub_date'))
-    paginator = Paginator(post_list, POSTS_ON_PAGE)
+    paginator = Paginator(post_list, POSTS_PER_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     return render(request, 'blog/index.html', {'page_obj': page_obj})
@@ -30,7 +33,7 @@ def category_posts(request, slug):
              .filter(is_published=True, pub_date__lte=timezone.now())
              .select_related('author', 'location')
              .order_by('-pub_date'))
-    paginator = Paginator(posts, POSTS_ON_PAGE)
+    paginator = Paginator(posts, POSTS_PER_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     return render(request, 'blog/category.html',
@@ -38,48 +41,87 @@ def category_posts(request, slug):
     
 
 def profile(request, username):
-    author = get_object_or_404(settings.AUTH_USER_MODEL, username=username)
-    posts = (author.posts
-             .filter(pub_date__lte=timezone.now())
-             .select_related('category', 'location')
-             .order_by('-pub_date'))
-    paginator = Paginator(posts, POSTS_ON_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    User   = get_user_model()
+    author = get_object_or_404(User, username=username)
+
+    if request.user == author:
+        posts = author.posts.all()
+    else:
+        posts = author.posts.filter(is_published=True,
+            pub_date__lte=timezone.now(),
+            category__is_published=True)
+    posts = posts.select_related('category', 'location').order_by('-pub_date')
+
+    paginator  = Paginator(posts, POSTS_PER_PAGE)
+    page_obj   = paginator.get_page(request.GET.get('page'))
     return render(request, 'blog/profile.html',
                   {'author': author, 'page_obj': page_obj})
 
 
-def post_detail(request, post_id):
-    post = get_object_or_404(Post, pk=post_id)
+def post_detail(request, pk):
+    post = get_object_or_404(Post, pk=pk)
     comments = post.comments.select_related('author').order_by('created')
     form = CommentForm()
     return render(request, 'blog/detail.html',
                   {'post': post, 'comments': comments, 'form': form})
 
 class IndexView(ListView):
-    model         = Post
     template_name = 'blog/index.html'
-    ordering      = '-pub_date'
-    paginate_by   = 10
+    paginate_by   = POSTS_PER_PAGE
+
+    def get_queryset(self):
+        return (Post.objects
+                .filter(is_published=True, pub_date__lte=timezone.now())
+                .select_related('author', 'location', 'category')
+                .order_by('-pub_date'))
 
 
 class ProfilePostsView(ListView):
-    model         = Post
     template_name = 'blog/profile.html'
-    paginate_by   = 10
+    paginate_by   = POSTS_PER_PAGE
+
     def get_queryset(self):
-        return Post.objects.filter(author__username=self.
-                                   kwargs['username']).order_by('-pub_date')
+        self.profile_user = get_object_or_404(get_user_model(),
+            username=self.kwargs['username'])
+        
+        posts_queryset = (Post.objects
+                    .filter(author=self.profile_user)
+                    .select_related('category', 'location')
+                    .order_by('-pub_date'))
+        if self.request.user != self.profile_user:
+            posts_queryset = posts_queryset.filter(
+                is_published=True,
+                pub_date__lte=timezone.now(),
+            )
+        return posts_queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['profile_user'] = self.profile_user
+        context['profile']      = self.profile_user
+        return context
     
 
 class CategoryView(ListView):
-    model         = Post
     template_name = 'blog/category.html'
-    paginate_by   = 10
+    paginate_by   = POSTS_PER_PAGE
+
     def get_queryset(self):
-        return Post.objects.filter(category__slug=self.
-                                   kwargs['slug']).order_by('-pub_date')
+        slug = self.kwargs['slug']
+        return (Post.objects
+                .filter(category__slug=slug,
+                        category__is_published=True,
+                        is_published=True,
+                        pub_date__lte=timezone.now())
+                .select_related('author', 'location', 'category')
+                .order_by('-pub_date'))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['category'] = get_object_or_404(
+            Category, slug=self.kwargs['slug'], is_published=True
+        )
+        return context
 
 
 class AuthorRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -93,6 +135,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.author = self.request.user
+        form.save()
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -123,16 +166,17 @@ def post_create(request):
         new_post.author = request.user
         new_post.save()
         return redirect('users:profile', username=request.user.username)
+
     return render(request, 'blog/create.html', {'form': form})
 
 @login_required
 def comment_create(request, post_id):
-    post = get_object_or_404(Post, pk=post_id)
+    post = get_object_or_404(Post, pk=post_id, is_published=True, pub_date__lte=timezone.now())
     form = CommentForm(request.POST or None)
     if form.is_valid():
         comment = form.save(commit=False)
         comment.author = request.user
-        comment.post   = post
+        comment.post = post
         comment.save()
     return redirect('blog:post_detail', pk=post_id)
 
@@ -154,3 +198,16 @@ def comment_delete(request, post_id, comment_id):
     if comment.author == request.user:
         comment.delete()
     return redirect('blog:post_detail', pk=post_id)
+
+@login_required
+def edit_post(request, post_id):
+    post = get_object_or_404(Post, pk=post_id)
+    if request.user != post.author:
+        return redirect('blog:post_detail', post_id=post.id)
+    
+    form = PostForm(request.POST or None, files=request.FILES or None, instance=post)
+    if form.is_valid():
+        form.save()
+        return redirect('blog:post_detail', post_id=post.id)
+    
+    return render(request, 'blog/create.html', {'form': form, 'is_edit': True})
