@@ -1,46 +1,39 @@
 from django.contrib import admin
-
-from .models import Category, Location, Post
-
-
-admin.site.site_header = 'Администрирование «Блогикум»'
-admin.site.site_title = 'Блогикум'
-admin.site.index_title = 'Добро пожаловать в админ-панель'
+from .models import Category, Location, Post, Comment
 
 
+@admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('title', 'is_published', 'created_at')
-    list_editable = ('is_published',)
-    search_fields = ('title', 'description')
-    prepopulated_fields = {'slug': ('title',)}
     list_filter = ('is_published',)
-    ordering = ('title',)
+    list_editable = ('is_published',)
+    search_fields = ('title',)
+    prepopulated_fields = {'slug': ('title',)}
 
 
+@admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
     list_display = ('name', 'is_published', 'created_at')
+    list_filter = ('is_published',)
     list_editable = ('is_published',)
     search_fields = ('name',)
-    list_filter = ('is_published',)
-    ordering = ('name',)
+    prepopulated_fields = {'slug': ('name',)}
 
 
+@admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     list_display = (
-        'title',
-        'author',
-        'category',
-        'pub_date',
-        'is_published',
+        'title', 'author', 'category', 'location',
+        'is_published', 'pub_date',
     )
+    list_filter = ('category', 'is_published')
     list_editable = ('is_published',)
-    list_filter = ('category', 'is_published', 'pub_date')
     search_fields = ('title', 'text')
-    date_hierarchy = 'pub_date'
-    ordering = ('-pub_date',)
-    autocomplete_fields = ('author', 'category', 'location')
+    list_select_related = ('author', 'category', 'location')
 
 
-admin.site.register(Category, CategoryAdmin)
-admin.site.register(Location, LocationAdmin)
-admin.site.register(Post, PostAdmin)
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ('text', 'author', 'post', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('text',)
