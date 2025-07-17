@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from users.views import ProfileEditView
+from django.views.generic import DetailView
 
 app_name = 'blog'
 
@@ -11,11 +12,13 @@ urlpatterns = [
     path('category/<slug:slug>/', views.CategoryView.as_view(), name='category'),
     # Профиль
     path('profile/<str:username>/', views.ProfilePostsView.as_view(), name='profile'),
+    path('profile/<str:username>/', ProfileView.as_view(), name='profile'),
 
     # Пост
     path('posts/<int:pk>/', views.post_detail, name='post_detail'),
     path('posts/create/', views.PostCreateView.as_view(),  name='create_post'),
-    path('posts/<int:pk>/edit/', views.PostUpdateView.as_view(), name='edit_post'),   # ← нужный тестам
+    path('posts/<int:pk>/', PostDetailView.as_view(), name='post_detail'),
+    path('posts/<int:pk>/edit/', views.PostUpdateView.as_view(), name='edit_post'),
     path('posts/<int:pk>/delete/', views.PostDeleteView.as_view(), name='delete_post'),
 
     # Комментарии

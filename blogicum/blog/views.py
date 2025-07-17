@@ -2,7 +2,7 @@ from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
@@ -130,17 +130,20 @@ class AuthorRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     model         = Post
-    form_class    = PostForm
+    # form_class    = PostForm
+    fields = ['title', 'text', 'image', 'category', 'location', 'pub_date']
     template_name = 'blog/create.html'
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        form.save()
+        # form.save()
         return super().form_valid(form)
 
+    # def get_success_url(self):
+    #     return reverse_lazy('users:profile',
+    #                         kwargs={'username': self.request.user.username})
     def get_success_url(self):
-        return reverse_lazy('users:profile',
-                            kwargs={'username': self.request.user.username})
+        return reverse('profile', kwargs={'username': self.request.user.username})
 
 class PostUpdateView(AuthorRequiredMixin, UpdateView):
     model         = Post
@@ -157,6 +160,36 @@ class PostDeleteView(AuthorRequiredMixin, DeleteView):
         return reverse_lazy('users:profile', 
                             kwargs={'username': self.request.user.username})
 
+
+class EditProfileView(LoginRequiredMixin, UpdateView):
+    model = User
+    fields = ['first_name', 'last_name', 'username', 'email']
+    template_name = 'blog/edit_profile.html'
+    success_url = reverse_lazy('profile')
+
+    def get_object(self):
+        return self.request.user
+
+class ProfileView(DetailView):
+    model = User
+    template_name = 'blog/user_profile.html'
+    context_object_name = 'profile_user'
+
+    def get_object(self):
+        return get_object_or_404(User, username=self.kwargs['username'])
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.object
+        if self.request.user == user:
+            posts = Post.objects.filter(author=user).order_by('-pub_date')
+        else:
+            posts = Post.objects.filter(author=user, pub_date__lte=timezone.now()).order_by('-pub_date')
+        paginator = Paginator(posts, 10)
+        page_number = self.request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        context['page_obj'] = page_obj
+        return context
 
 @login_required
 def post_create(request):

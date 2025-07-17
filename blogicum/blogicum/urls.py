@@ -1,5 +1,6 @@
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import path
+from .views import EditProfileView
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -16,6 +17,10 @@ urlpatterns = [
     path('auth/', include(('users.urls', 'users'), namespace='users')),
     path('auth/', include('django.contrib.auth.urls')),
     path('pages/', include('pages.urls')),
+    path('profile/edit/', EditProfileView.as_view(), name='edit_profile'),
+    path('posts/<int:pk>/', PostDetailView.as_view(), name='post_detail'),
+    path('posts/create/', PostCreateView.as_view(), name='post_create'),
+    path('profile/<str:username>/', ProfileView.as_view(), name='profile'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:
