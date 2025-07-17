@@ -1,132 +1,54 @@
-from django.conf import settings
 from django.db import models
-from django.db.models.functions import Now
 from django.contrib.auth import get_user_model
-
-
+from django.utils import timezone
 
 User = get_user_model()
 
-TITLE_MAX_LENGTH: int = 256
-SLUG_MAX_LENGTH: int = 64
-
-
-class PostQuerySet(models.QuerySet):
-
-    def published(self):
-        return self.filter(
-            is_published=True,
-            pub_date__lte=Now(),
-            category__is_published=True,
-        )
-
-    def with_related(self):
-        return self.select_related('author', 'category', 'location')
-
 
 class Category(models.Model):
-    title = models.CharField('Заголовок', max_length=TITLE_MAX_LENGTH)
-    slug = models.SlugField(
-        'Идентификатор',
-        max_length=SLUG_MAX_LENGTH,
-        unique=True,
-        help_text=(
-            'Идентификатор страницы для URL; '
-            'разрешены символы латиницы, цифры, дефис и подчёркивание.'
-        ),
-    )
-    description = models.TextField('Описание')
-    is_published = models.BooleanField(
-        'Опубликовано',
-        default=True,
-        help_text='Снимите галочку, чтобы скрыть публикацию.',
-    )
-    created_at = models.DateTimeField('Добавлено', auto_now_add=True)
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(unique=True)
+    description = models.TextField(blank=True)
 
-    class Meta:
-        ordering = ('title',)
-        verbose_name = 'категория'
-        verbose_name_plural = 'Категории'
-
-    def __str__(self) -> str:
+    def __str__(self):
         return self.title
 
 
 class Location(models.Model):
-    name = models.CharField('Название места', max_length=TITLE_MAX_LENGTH)
-    is_published = models.BooleanField(
-        'Опубликовано',
-        default=True,
-        help_text='Снимите галочку, чтобы скрыть место.',
-    )
-    created_at = models.DateTimeField('Добавлено', auto_now_add=True)
+    name = models.CharField(max_length=255)
 
-    class Meta:
-        ordering = ('name',)
-        verbose_name = 'местоположение'
-        verbose_name_plural = 'Местоположения'
-
-    def __str__(self) -> str:
+    def __str__(self):
         return self.name
 
 
 class Post(models.Model):
+    title = models.CharField(max_length=255, verbose_name="Заголовок")
+    text = models.TextField(verbose_name="Текст")
+    pub_date = models.DateTimeField(verbose_name="Дата публикации", default=timezone.now)
     author = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='posts',
+        User, on_delete=models.CASCADE, related_name='posts', verbose_name="Автор"
     )
     category = models.ForeignKey(
-        Category,
-        verbose_name='Категория',
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='posts',
+        Category, on_delete=models.SET_NULL, related_name='posts',
+        blank=True, null=True, verbose_name="Категория"
     )
     location = models.ForeignKey(
-        Location,
-        verbose_name='Местоположение',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        Location, on_delete=models.SET_NULL, related_name='posts',
+        blank=True, null=True, verbose_name="Местоположение"
     )
-
-    title = models.CharField('Заголовок', max_length=TITLE_MAX_LENGTH)
-    text = models.TextField('Текст')
-    pub_date = models.DateTimeField(
-        'Дата и время публикации',
-        help_text=(
-            'Если установить дату и время в будущем — '
-            'можно делать отложенные публикации.'
-        ),
+    image = models.ImageField(
+        upload_to='posts/', blank=True, null=True, verbose_name="Изображение"
     )
-    is_published = models.BooleanField(
-        'Опубликовано',
-        default=True,
-        help_text='Снимите галочку, чтобы скрыть публикацию.',
-    )
-    created_at = models.DateTimeField('Добавлено', auto_now_add=True)
-
-    objects: PostQuerySet = PostQuerySet.as_manager()
 
     class Meta:
-        ordering = ('-pub_date',)
-        verbose_name = 'публикация'
-        verbose_name_plural = 'Публикации'
+        ordering = ['-pub_date']
 
-    def __str__(self) -> str:
+    def __str__(self):
         return self.title
-    
-    image = models.ImageField(
-        'Картинка', upload_to='posts_images/', blank=True
-    )
 
 
 class Comment(models.Model):
-    post      = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
-    author    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    text      = models.TextField()
-    created   = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['created']
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
