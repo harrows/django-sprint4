@@ -13,7 +13,7 @@ class PublishedManager(models.Manager):
 
 
 class TimeStampedMixin(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания', blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата изменения')
 
     class Meta:
@@ -41,6 +41,7 @@ class Category(TimeStampedMixin):
 class Location(TimeStampedMixin):
     name = models.CharField('Название места', max_length=256)
     is_published = models.BooleanField('Опубликовано', default=True)
+    slug = models.SlugField('Слаг', unique=True, max_length=200, blank=True, null=True)
 
     objects = models.Manager()
     published = PublishedManager()
