@@ -9,6 +9,7 @@ User = get_user_model()
 class Category(models.Model):
     title = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
+    is_published = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = 'Category'
@@ -23,6 +24,7 @@ def post_image_path(instance: "Post", filename: str) -> str:
 
 class Location(models.Model):
     name = models.CharField(max_length=200, unique=True)
+    is_published = models.BooleanField(default=True) 
 
     class Meta:
         verbose_name = 'Location'
@@ -39,6 +41,9 @@ class Post(models.Model):
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='posts', default=1, verbose_name='Категория')
     location = models.ForeignKey(Location, on_delete=models.SET_NULL, related_name='posts', blank=True, null=True)
     image = models.ImageField(upload_to='posts/', blank=True, null=True)
+    is_published = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
 
     class Meta:
         ordering = ['-pub_date']

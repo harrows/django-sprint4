@@ -3,6 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.views.generic import ListView
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.views.generic import TemplateView
 
 from blog.models import Post
 
@@ -50,3 +51,9 @@ def register(request):
     else:
         form = UserCreationForm()
     return render(request, 'registration/registration_form.html', {'form': form})
+
+class AboutPage(TemplateView):
+    template_name = 'pages/about.html'
+
+class RulesPage(TemplateView):
+    template_name = 'pages/rules.html'
