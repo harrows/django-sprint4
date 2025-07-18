@@ -1,11 +1,9 @@
 from django.urls import path
 from . import views
-from .views import AboutPage, RulesPage
-
 
 app_name = 'pages'
 
 urlpatterns = [
-    path('about/',  AboutPage.as_view(),  name='about'),
-    path('rules/',  RulesPage.as_view(),  name='rules'),
+    path('about/', views.AboutPage.as_view(), name='about'),
+    path('rules/', views.RulesPage.as_view(), name='rules'),
 ]

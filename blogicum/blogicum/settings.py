@@ -3,7 +3,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-STATICFILES_DIRS = [BASE_DIR / 'blogicum' / 'static']
+STATICFILES_DIRS = [BASE_DIR / 'static']
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -13,7 +13,7 @@ SECRET_KEY = 'django-insecure-1ge0fy!d0j-n!(8yxzvz$19qpw$y*p$bbk2lv88-#(1m-bvh4h
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -25,9 +25,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'blog.apps.BlogConfig',
+    'pages.apps.PagesConfig',
     'blogicum',
-    'blog',
-    'pages',
     "django_bootstrap5",
 ]
 
@@ -118,9 +118,8 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-POSTS_ON_INDEX = 5
-
 STATIC_URL = '/static/'
+
 MEDIA_URL  = '/media/'
 MEDIA_ROOT = BASE_DIR / 'blogicum' / 'media'
 
