@@ -1,71 +1,119 @@
 from django.db import models
-from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.urls import reverse
-import uuid
-
-User = get_user_model()
-
-class Category(models.Model):
-    title = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
-    is_published = models.BooleanField(default=True)
-
-    class Meta:
-        verbose_name = 'Category'
-        verbose_name_plural = 'Categories'
-
-    def __str__(self):
-        return self.title
+from django.utils.text import slugify
 
 
 def post_image_path(instance: "Post", filename: str) -> str:
-    return f"posts/{uuid.uuid4()}/{filename}"
+    return f"posts/{instance.pk}/{filename}"
 
-class Location(models.Model):
-    name = models.CharField(max_length=200, unique=True)
-    is_published = models.BooleanField(default=True) 
 
-    class Meta:
-        verbose_name = 'Location'
-        verbose_name_plural = 'Locations'
-
-    def __str__(self):
-        return self.name
-
-class Post(models.Model):
-    title = models.CharField(max_length=200)
-    text = models.TextField()
-    pub_date = models.DateTimeField(default=timezone.now, db_index=True)
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
-    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='posts', default=1, verbose_name='Категория')
-    location = models.ForeignKey(Location, on_delete=models.SET_NULL, related_name='posts', blank=True, null=True)
-    image = models.ImageField(upload_to='posts/', blank=True, null=True)
-    is_published = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
+class Category(models.Model):
+    title = models.CharField("Название", max_length=256, unique=True)
+    description = models.TextField("Описание", blank=True)
+    slug = models.SlugField("Слаг", max_length=256, unique=True)
+    is_published = models.BooleanField("Опубликована", default=True, db_index=True)
+    created_at = models.DateTimeField("Дата создания", default=timezone.now, editable=False)
 
     class Meta:
-        ordering = ['-pub_date']
-        verbose_name = 'Post'
-        verbose_name_plural = 'Posts'
+        ordering = ("title",)
+        verbose_name = "Категория"
+        verbose_name_plural = "Категории"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.title
 
-    def get_absolute_url(self):
-        return reverse('blog:post_detail', kwargs={'post_id': self.pk})
 
-class Comment(models.Model):
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
-    text = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+class Location(models.Model):
+    name = models.CharField("Название", max_length=256, unique=True)
+    slug = models.SlugField("Слаг", max_length=256, unique=True, null=True, blank=True)
+    is_published = models.BooleanField("Опубликовано", default=True, db_index=True)
+    created_at = models.DateTimeField("Создано", default=timezone.now, editable=False)
 
     class Meta:
-        ordering = ['created_at']
-        verbose_name = 'Comment'
-        verbose_name_plural = 'Comments'
+        ordering = ("name",)
+        verbose_name = "Местоположение"
+        verbose_name_plural = "Местоположения"
 
-    def __str__(self):
-        return self.text[:15] if len(self.text) > 15 else self.text
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)[:200]
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class PublishedManager(models.Manager):
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .filter(is_published=True, pub_date__lte=timezone.now())
+        )
+
+
+class Post(models.Model):
+    title = models.CharField("Заголовок", max_length=256)
+    text = models.TextField("Текст")
+    slug = models.SlugField("Слаг", max_length=256, unique=True, blank=True)
+    pub_date = models.DateTimeField("Дата публикации", default=timezone.now, db_index=True)
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        related_name="posts",
+        verbose_name="Местоположение",
+        null=True,
+        blank=True,
+    )
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="posts",
+        verbose_name="Категория",
+    )
+    is_published = models.BooleanField("Опубликовано", default=True, db_index=True)
+    image = models.ImageField("Картинка", upload_to=post_image_path, blank=True, null=True)
+    created_at = models.DateTimeField("Создана", auto_now_add=True)
+
+
+    objects = models.Manager()
+    published = PublishedManager()
+
+    class Meta:
+        ordering = ("-pub_date",)
+        verbose_name = "Пост"
+        verbose_name_plural = "Посты"
+
+    def __str__(self) -> str:
+        return self.title
+
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)[:250]
+        super().save(*args, **kwargs)
+
+
+class Comment(models.Model):
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name="comments",
+        verbose_name="Пост",
+    )
+    author = models.ForeignKey(
+        "auth.User",
+        on_delete=models.CASCADE,
+        related_name="comments",
+        verbose_name="Автор",
+    )
+    text = models.TextField("Текст комментария")
+    created_at = models.DateTimeField("Создан", auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ("created_at",)
+        verbose_name = "Комментарий"
+        verbose_name_plural = "Комментарии"
+
+    def __str__(self) -> str:
+        return f"Комментарий {self.pk} к посту «{self.post}»"

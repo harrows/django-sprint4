@@ -8,6 +8,6 @@ handler500 = "blogicum.views.server_error"
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", include("posts.urls", namespace="posts")),
+    path("", include("blog.urls", namespace="blog")),
     path("auth/", include("django.contrib.auth.urls")),
 ]
