@@ -130,6 +130,6 @@ if DEBUG:
     INSTALLED_APPS += ['debug_toolbar']
     MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 
-CSRF_FAILURE_VIEW = 'blogicum.views.csrf_failure'
+CSRF_FAILURE_VIEW = "users.views.csrf_failure"
 LOGIN_URL = '/auth/login/'
 LOGIN_REDIRECT_URL = 'index'
