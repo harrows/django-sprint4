@@ -64,10 +64,17 @@ class EditProfileView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = User
     template_name = 'users/profile_edit.html'
     fields = ['first_name', 'last_name', 'email']
+    template_name = "users/edit_profile.html"
+    success_url = reverse_lazy("users:profile")
 
+    def get_object(self, queryset=None):
+        return self.request.user
+    
+    
     def test_func(self):
         profile_user = get_object_or_404(User, username=self.kwargs['username'])
         return self.request.user == profile_user
+
 
     def get_success_url(self):
         return reverse('profile', kwargs={'username': self.request.user.username})
