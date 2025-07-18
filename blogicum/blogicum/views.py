@@ -1,4 +1,5 @@
 from django import forms
+from django.shortcuts import render
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -17,20 +18,20 @@ class CommentForm(forms.ModelForm):
         fields = ['text']
 
 
-def page_not_found(request, exception):
-    return render(request, 'pages/404.html', status=404)
-
-
-def server_error(request):
-    return render(request, 'pages/500.html', status=500)
+def bad_request(request, exception):
+    return render(request, "errors/400.html", status=400)
 
 
 def permission_denied(request, exception):
-    return render(request, 'pages/403.html', status=403)
+    return render(request, "errors/403.html", status=403)
 
 
-def csrf_failure(request, reason=''):
-    return render(request, 'pages/403csrf.html', status=403)
+def page_not_found(request, exception):
+    return render(request, "errors/404.html", status=404)
+
+
+def server_error(request):
+    return render(request, "errors/500.html", status=500)
 
 
 class AboutPageView(TemplateView):
