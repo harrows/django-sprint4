@@ -87,6 +87,9 @@ class Post(models.Model):
         null=True,
         blank=True,
     )
+    image = models.ImageField('Изображение', upload_to='posts/', null=True, blank=True)
+    pub_date = models.DateTimeField('Дата и время публикации', help_text='Время публикации')
+    is_published = models.BooleanField('Опубликовано', default=True, help_text='Опубликовано')
 
     title = models.CharField('Заголовок', max_length=TITLE_MAX_LENGTH)
     text = models.TextField('Текст')
@@ -113,3 +116,15 @@ class Post(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class Comment(models.Model):
+    post = models.ForeignKey(Post, verbose_name='Публикация', on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(User, verbose_name='Автор комментария', on_delete=models.CASCADE)
+    text = models.TextField('Текст комментария')
+    created_at = models.DateTimeField('Добавлено', auto_now_add=True)
+
+    class Meta:
+        ordering = ('created_at',)
+        verbose_name = 'комментарий'
+        verbose_name_plural = 'Комментарии'
