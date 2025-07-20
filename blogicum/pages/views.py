@@ -20,3 +20,9 @@ def error_500(request):
 
 def csrf_failure(request, reason=''):
     return render(request, 'pages/403csrf.html', status=403)
+
+
+handler404 = 'pages.views.page_not_found'
+handler500 = 'pages.views.server_error'
+handler403 = 'pages.views.csrf_failure'
+handler400 = 'pages.views.bad_request'

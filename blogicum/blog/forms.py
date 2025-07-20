@@ -28,7 +28,12 @@ class CommentForm(forms.ModelForm):
 
 class EditProfileForm(forms.ModelForm):
     """Форма изменения профиля пользователя."""
-
     class Meta:
         model = User
         fields = ('first_name', 'last_name', 'username', 'email')
+        
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.exclude(pk=self.instance.pk).filter(username=username).exists():
+            raise forms.ValidationError("Пользователь с таким именем уже существует.")
+        return username
