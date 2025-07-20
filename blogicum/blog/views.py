@@ -33,12 +33,15 @@ def _get_posts_queryset(
         )
         if not show_future_to_author:
             qs = qs.filter(pub_date__lte=timezone.now())
+
+    if show_future_to_author:
+        qs = qs | base_qs.filter(author=request.user, pub_date__gt=timezone.now())
+
     if select_related_fields:
         qs = qs.select_related('author', 'location', 'category')
     if annotate_comments:
         qs = qs.annotate(comment_count=Count('comments')).order_by(*Post._meta.ordering)
     return qs
-
 
 
 def _paginate(request, queryset, per_page: int = POSTS_PER_PAGE):
@@ -54,15 +57,16 @@ def index(request):
 
 
 def post_detail(request, post_id):
-    """Детальная страница поста с комментариями."""
-    post = get_object_or_404(Post, pk=post_id)
-    if post.author != request.user:
-        post = get_object_or_404(
-            _get_posts_queryset(select_related_fields=False),
-            pk=post_id
-        )
+    try:
+        post = get_object_or_404(Post, pk=post_id)
+    except Http404:
+        return render(request, 'pages/404.html', status=404)
 
-    comments = post.comments.select_related('author').order_by('created_at')
+    # Разрешаем просмотр автору даже если пост не опубликован
+    if not post.is_published and post.author != request.user:
+        return render(request, 'pages/404.html', status=404)
+
+    comments = post.comments.select_related('author')
     context = {
         'post': post,
         'form': CommentForm(),
@@ -72,25 +76,40 @@ def post_detail(request, post_id):
 
 
 def category_posts(request, slug):
-    """Страница постов определенной категории."""
     category = get_object_or_404(Category, slug=slug, is_published=True)
-    posts = _get_posts_queryset(base_qs=category.posts)
+
+    posts = category.posts.all()
+    if request.user != category.author:
+        posts = posts.filter(
+            is_published=True,
+            pub_date__lte=timezone.now()
+        )
+
+    posts = posts.select_related('author', 'location', 'category')
+    posts = posts.annotate(comment_count=Count('comments')).order_by(*Post._meta.ordering)
+
     page_obj = _paginate(request, posts)
     return render(request, 'blog/category.html', {'category': category, 'page_obj': page_obj})
 
 
 def profile(request, username):
     profile_user = get_object_or_404(User, username=username)
-    posts = _get_posts_queryset(
-        base_qs=profile_user.posts,
-        filter_published=request.user != profile_user,
-        show_future_to_author=request.user == profile_user
-    )
+    is_owner = request.user == profile_user
+    
+    posts = profile_user.posts.all()
+    if not is_owner:
+        posts = posts.filter(
+            is_published=True,
+            pub_date__lte=timezone.now()
+        )
+    posts = posts.select_related('author', 'location', 'category')
+    posts = posts.annotate(comment_count=Count('comments')).order_by(*Post._meta.ordering)
+    
     page_obj = _paginate(request, posts)
     return render(
         request,
         'blog/profile.html',
-        {'profile': profile_user, 'page_obj': page_obj}
+        {'profile': profile_user, 'page_obj': page_obj, 'is_owner': is_owner}
     )
 
 
@@ -114,11 +133,13 @@ def edit_profile(request, username):
     if request.user.username != username:
         return redirect('blog:profile', username=username)
 
-    user = get_object_or_404(User, username=username)
+    user = request.user  # Используем текущего пользователя
     form = EditProfileForm(request.POST or None, instance=user)
+    
     if form.is_valid():
-        form.save()
-        return redirect('blog:profile', username=username)
+        form.save()  # Просто сохраняем форму
+        return redirect('blog:profile', username=user.username)
+    
     return render(request, 'blog/user.html', {'form': form})
 
 
@@ -153,7 +174,6 @@ def post_create(request):
         return redirect('blog:profile', username=request.user.username)
     return render(request, 'blog/create.html', {'form': form})
 
-
 @login_required
 def post_edit(request, post_id):
     """Редактирование существующего поста."""
@@ -184,20 +204,23 @@ def delete_post(request, post_id):
 @login_required
 def add_comment(request, post_id):
     try:
-        post = get_object_or_404(Post, pk=post_id)
-        if not post.is_published and post.author != request.user:
-            raise Http404
-
-        if request.method == 'POST':
-            form = CommentForm(request.POST)
-            if form.is_valid():
-                comment = form.save(commit=False)
-                comment.author = request.user
-                comment.post = post
-                comment.save()
-        return redirect('blog:post_detail', post_id=post_id)
+        post = Post.objects.get(pk=post_id)
     except Post.DoesNotExist:
-        raise Http404
+        return render(request, 'pages/404.html', status=404)
+    
+    # Разрешаем комментарии только к опубликованным постам или постам автора
+    if not post.is_published and post.author != request.user:
+        return render(request, 'pages/404.html', status=404)
+    
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.author = request.user
+            comment.post = post
+            comment.save()
+    
+    return redirect('blog:post_detail', post_id=post_id)
 
 
 @login_required

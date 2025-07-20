@@ -114,6 +114,11 @@ class Comment(models.Model):
         verbose_name='Дата создания'
     )
 
+    def save(self, *args, **kwargs):
+        if not self.post.is_published:
+            raise ValueError("Cannot add comment to unpublished post")
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
