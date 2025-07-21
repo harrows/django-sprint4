@@ -1,27 +1,28 @@
-from django.conf import settings
+# blogicum/blogicum/urls.py
 from django.contrib import admin
-from django.urls import include, path, reverse_lazy
-from django.contrib.auth.forms import UserCreationForm
-from django.conf.urls.static import static
-from django.views.generic.edit import CreateView
+from django.urls import include, path
 
+from blog import views as blog_views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('blog.urls', namespace='blog')),
-    path('pages/', include('pages.urls', namespace='pages')),
-    path('auth/', include('django.contrib.auth.urls')),
-    path(
-        'auth/registration/',
-        CreateView.as_view(
-            template_name='registration/registration_form.html',
-            form_class=UserCreationForm,
-            success_url=reverse_lazy('blog:index'),
-        ),
-        name='registration',
-    ),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Главный маршрутизатор приложения блога (namespace «blog:…»)
+    path("", include("blog.urls", namespace="blog")),
 
-handler404 = 'pages.views.page_not_found'
-handler500 = 'pages.views.server_error'
-handler403 = 'pages.views.csrf_failure'
+    # ─────── auth ───────
+    # 1. типовые представления Django (login, logout, password_change…)
+    #    имена остаются «login», «logout», поэтому шаблон header.html будет работать
+    path("auth/", include("django.contrib.auth.urls")),
+    # 2. собственная регистрация (используется в шаблоне как {% url 'registration' %})
+    path("auth/registration/", blog_views.registration, name="registration"),
+
+    # статические страницы
+    path("", include("pages.urls", namespace="pages")),
+
+    path("admin/", admin.site.urls),
+]
+
+# Кастомные обработчики ошибок
+handler400 = "pages.views.bad_request"
+handler403 = "pages.views.permission_denied"
+handler404 = "pages.views.page_not_found"
+handler500 = "pages.views.server_error"
