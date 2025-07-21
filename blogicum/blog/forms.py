@@ -1,7 +1,7 @@
 from django import forms
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth import get_user_model
-
-from .models import Comment, Post
+from .models import Post, Comment
 
 User = get_user_model()
 
@@ -9,25 +9,34 @@ User = get_user_model()
 class PostForm(forms.ModelForm):
     class Meta:
         model = Post
-        fields = ('title', 'text', 'category', 'location', 'pub_date', 'image')
+        exclude = ('author',)
+        widgets = {
+            'pub_date': forms.DateTimeInput(
+                format='%Y-%m-%dT%H:%M',
+                attrs={'type': 'datetime-local'}
+            )
+        }
 
 
 class CommentForm(forms.ModelForm):
-    """Форма добавления / редактирования комментария."""
-
     class Meta:
         model = Comment
-        fields = ('text',)
-        widgets = {'text': forms.Textarea(attrs={'rows': 3})}
+        fields = ('text', )
 
 
-class EditProfileForm(forms.ModelForm):
+class SignUpForm(UserCreationForm):
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = UserCreationForm.Meta.fields + (
+            "first_name",
+            "last_name",
+            "email",
+        )
+
+
+class ProfileEditForm(UserChangeForm):
     class Meta:
         model = User
         fields = ('first_name', 'last_name', 'username', 'email')
 
-    def clean_username(self):
-        username = self.cleaned_data['username']
-        if User.objects.exclude(pk=self.instance.pk).filter(username=username).exists():
-            raise forms.ValidationError("Пользователь с таким именем уже существует")
-        return username
+    password = None
