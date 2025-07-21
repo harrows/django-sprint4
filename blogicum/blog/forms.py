@@ -1,6 +1,7 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+
 from .models import Post, Comment
 
 User = get_user_model()
@@ -12,7 +13,10 @@ class PostForm(forms.ModelForm):
             format='%Y-%m-%dT%H:%M',
             attrs={'type': 'datetime-local'}
         ),
-        input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S']
+        input_formats=[
+            '%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
+            '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S'
+        ]
     )
 
     class Meta:

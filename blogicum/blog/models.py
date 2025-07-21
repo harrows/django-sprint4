@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 
 User = get_user_model()
 
@@ -25,7 +25,10 @@ class Category(PublishedModel):
     slug = models.SlugField(
         unique=True,
         verbose_name='Идентификатор',
-        help_text='Идентификатор страницы для URL; разрешены символы латиницы, цифры, дефис и подчёркивание.'
+        help_text=(
+            'Идентификатор страницы для URL; разрешены символы латиницы, '
+            'цифры, дефис и подчёркивание.'
+        )
     )
 
     class Meta:
@@ -52,7 +55,10 @@ class Post(PublishedModel):
     text = models.TextField(verbose_name='Текст')
     pub_date = models.DateTimeField(
         verbose_name='Дата и время публикации',
-        help_text='Если установить дату и время в будущем — можно делать отложенные публикации.'
+        help_text=(
+            'Если установить дату и время в будущем — можно делать отложенные '
+            'публикации.'
+        )
     )
     author = models.ForeignKey(
         User,
@@ -69,7 +75,7 @@ class Post(PublishedModel):
     category = models.ForeignKey(
         Category,
         verbose_name='Категория',
-        on_delete=models.CASCADE,  # Изменено с SET_NULL на CASCADE
+        on_delete=models.CASCADE,
         blank=True
     )
     image = models.ImageField(
@@ -101,7 +107,8 @@ class Comment(models.Model):
         verbose_name='Автор'
     )
     text = models.TextField(verbose_name='Текст')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Добавлено')
+    created_at = models.DateTimeField(auto_now_add=True,
+                                      verbose_name='Добавлено')
 
     class Meta:
         verbose_name = 'комментарий'
