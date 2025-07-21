@@ -77,13 +77,13 @@ class ProfileListView(ListView):
 class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = User
     form_class = ProfileEditForm
-    template_name = 'blog/user.html'
+    template_name = 'blog/create.html'  # Changed to reuse existing template as per chat
 
     def get_object(self):
         return self.request.user
 
     def form_valid(self, form):
-        self.object = form.save(commit=True)
+        self.object = form.save()
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -114,7 +114,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        self.object = form.save(commit=True)
+        self.object = form.save()
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -149,13 +149,18 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
     model = Comment
     form_class = CommentForm
 
+    def get(self, request, *args, **kwargs):
+        get_object_or_404(Post, pk=self.kwargs['post_id'])
+        return super().get(request, *args, **kwargs)
+
     def form_valid(self, form):
         post = get_object_or_404(Post, pk=self.kwargs['post_id'])
-        if post.author != self.request.user and (not post.is_published or post.pub_date > timezone.now() or not post.category.is_published):
-            raise Http404("No permission to comment on this post")
+        if not post.is_published or post.pub_date > timezone.now() or not post.category.is_published:
+            if post.author != self.request.user:
+                raise Http404("Post not found")
         form.instance.author = self.request.user
         form.instance.post = post
-        self.object = form.save(commit=True)
+        self.object = form.save()
         return super().form_valid(form)
 
     def get_success_url(self):
