@@ -20,8 +20,8 @@ def page_not_found(request, exception=None):
 
 def permission_denied(request, exception=None):
     return render(
-        'pages/403.html',
         request,
+        'pages/403.html',
         status=403
     )
 

@@ -16,7 +16,7 @@ def get_posts_queryset(select_related_fields=True):
     )
     if select_related_fields:
         qs = qs.select_related('category', 'location', 'author')
-    return qs.annotate(comment_count=Count('comments'))
+    return qs.annotate(comment_count=Count('comments')).order_by('-pub_date')
 
 
 class OnlyAuthorMixin(UserPassesTestMixin):
@@ -82,9 +82,7 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
         return self.request.user
 
     def get_success_url(self):
-        return reverse_lazy(
-            'blog:profile', kwargs={'username': self.request.user.username}
-        )
+        return reverse('blog:profile', kwargs={'username': self.object.username})  # Изменено на self.object для обновленного username
 
 
 class PostDetailView(DetailView):
@@ -100,7 +98,7 @@ class PostDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = CommentForm()
-        context['comments'] = self.object.comments.select_related('author')
+        context['comments'] = self.object.comments.select_related('author').order_by('created_at')
         return context
 
 
@@ -111,7 +109,8 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        return super().form_valid(form)
+        self.object = form.save()
+        return super().form_valid(form)  # Добавлено explicit save
 
     def get_success_url(self):
         return reverse('blog:profile', kwargs={'username': self.request.user.username})
@@ -145,10 +144,16 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
     model = Comment
     form_class = CommentForm
 
+    def dispatch(self, request, *args, **kwargs):
+        get_object_or_404(get_posts_queryset(False), pk=self.kwargs['post_id'])  # Добавлено для 404 если post не видим
+        return super().dispatch(request, *args, **kwargs)
+
     def form_valid(self, form):
+        post = get_object_or_404(Post, pk=self.kwargs['post_id'])  # Без фильтра, чтобы сохранить даже на unpublished, но dispatch уже проверил видимость
         form.instance.author = self.request.user
-        form.instance.post = get_object_or_404(Post, pk=self.kwargs['post_id'])
-        return super().form_valid(form)
+        form.instance.post = post
+        self.object = form.save()
+        return super().form_valid(form)  # Explicit save
 
     def get_success_url(self):
         return reverse('blog:post_detail', kwargs={'post_id': self.kwargs['post_id']})
