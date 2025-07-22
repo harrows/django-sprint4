@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models import Count
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -42,7 +44,8 @@ class Category(PublishedModel):
 
 
 class Location(PublishedModel):
-    name = models.CharField(max_length=MAX_LENGTH, verbose_name='Название места')
+    name = models.CharField(max_length=MAX_LENGTH,
+                            verbose_name='Название места')
 
     class Meta:
         verbose_name = 'местоположение'
@@ -53,15 +56,14 @@ class Location(PublishedModel):
 
 
 class PostQuerySet(models.QuerySet):
-    def published(self, select_related_fields=True):
-        qs = self.filter(
+    def published(self):
+        return self.filter(
             pub_date__lte=timezone.now(),
             is_published=True,
             category__is_published=True
-        )
-        if select_related_fields:
-            qs = qs.select_related('category', 'location', 'author')
-        return qs.annotate(
+        ).select_related(
+            'category', 'location', 'author'
+        ).annotate(
             comment_count=Count('comments')
         ).order_by('-pub_date')
 
@@ -125,7 +127,8 @@ class Comment(models.Model):
         verbose_name='Автор'
     )
     text = models.TextField(verbose_name='Текст')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Добавлено')
+    created_at = models.DateTimeField(auto_now_add=True,
+                                      verbose_name='Добавлено')
 
     class Meta:
         verbose_name = 'комментарий'
