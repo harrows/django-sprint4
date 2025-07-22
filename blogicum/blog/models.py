@@ -3,6 +3,8 @@ from django.db import models
 
 User = get_user_model()
 
+MAX_LENGTH = 256
+
 
 class PublishedModel(models.Model):
     is_published = models.BooleanField(
@@ -20,7 +22,7 @@ class PublishedModel(models.Model):
 
 
 class Category(PublishedModel):
-    title = models.CharField(max_length=256, verbose_name='Заголовок')
+    title = models.CharField(max_length=MAX_LENGTH, verbose_name='Заголовок')
     description = models.TextField(verbose_name='Описание')
     slug = models.SlugField(
         unique=True,
@@ -40,7 +42,7 @@ class Category(PublishedModel):
 
 
 class Location(PublishedModel):
-    name = models.CharField(max_length=256, verbose_name='Название места')
+    name = models.CharField(max_length=MAX_LENGTH, verbose_name='Название места')
 
     class Meta:
         verbose_name = 'местоположение'
@@ -50,16 +52,21 @@ class Location(PublishedModel):
         return self.name
 
 
-class Post(PublishedModel):
-    title = models.CharField(max_length=256, verbose_name='Заголовок')
-    text = models.TextField(verbose_name='Текст')
-    pub_date = models.DateTimeField(
-        verbose_name='Дата и время публикации',
-        help_text=(
-            'Если установить дату и время в будущем — можно делать отложенные '
-            'публикации.'
+class PostQuerySet(models.QuerySet):
+    def published(self, select_related_fields=True):
+        qs = self.filter(
+            pub_date__lte=timezone.now(),
+            is_published=True,
+            category__is_published=True
         )
-    )
+        if select_related_fields:
+            qs = qs.select_related('category', 'location', 'author')
+        return qs.annotate(
+            comment_count=Count('comments')
+        ).order_by('-pub_date')
+
+
+class Post(PublishedModel):
     author = models.ForeignKey(
         User,
         verbose_name='Автор публикации',
@@ -78,12 +85,23 @@ class Post(PublishedModel):
         on_delete=models.CASCADE,
         blank=True
     )
+    title = models.CharField(max_length=MAX_LENGTH, verbose_name='Заголовок')
+    text = models.TextField(verbose_name='Текст')
+    pub_date = models.DateTimeField(
+        verbose_name='Дата и время публикации',
+        help_text=(
+            'Если установить дату и время в будущем — можно делать отложенные '
+            'публикации.'
+        )
+    )
     image = models.ImageField(
         'Изображение',
         upload_to='posts_images',
         blank=True,
         null=True
     )
+
+    objects = PostQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'публикация'
@@ -107,8 +125,7 @@ class Comment(models.Model):
         verbose_name='Автор'
     )
     text = models.TextField(verbose_name='Текст')
-    created_at = models.DateTimeField(auto_now_add=True,
-                                      verbose_name='Добавлено')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Добавлено')
 
     class Meta:
         verbose_name = 'комментарий'
