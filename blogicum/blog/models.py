@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models import Count
-from django.utils import timezone
+
+from .querysets import PostQuerySet
 
 User = get_user_model()
 
@@ -53,19 +53,6 @@ class Location(PublishedModel):
 
     def __str__(self):
         return self.name
-
-
-class PostQuerySet(models.QuerySet):
-    def published(self):
-        return self.filter(
-            pub_date__lte=timezone.now(),
-            is_published=True,
-            category__is_published=True
-        ).select_related(
-            'category', 'location', 'author'
-        ).annotate(
-            comment_count=Count('comments')
-        ).order_by('-pub_date')
 
 
 class Post(PublishedModel):

@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count
+# from django.db.models import Count
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
@@ -21,7 +21,7 @@ class IndexListView(ListView):
     model = Post
     template_name = 'blog/index.html'
     paginate_by = 10
-    queryset = Post.objects.published()
+    queryset = Post.objects.published().annotate_comments()
 
 
 class CategoryListView(ListView):
@@ -35,7 +35,7 @@ class CategoryListView(ListView):
             slug=self.kwargs['slug'],
             is_published=True
         )
-        return category.post_set.published()
+        return category.post_set.published().annotate_comments()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -57,14 +57,12 @@ class ProfileListView(ListView):
             User, username=self.kwargs['username']
         )
         if self.request.user == self.profile_user:
-            return Post.objects.filter(
-                author=self.profile_user
-            ).select_related(
-                'category', 'location', 'author'
-            ).annotate(
-                comment_count=Count('comments')
-            ).order_by('-pub_date')
-        return Post.objects.published().filter(author=self.profile_user)
+            return (
+                self.profile_user.post_set.with_related()
+                .annotate_comments()
+                .order_by('-pub_date')
+            )
+        return self.profile_user.post_set.published().annotate_comments()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
